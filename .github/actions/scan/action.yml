@@ -17,10 +17,6 @@ inputs:
     description: Ignore vulnerabilities with no available fix.
     required: false
     default: "true"
-  sarif-file:
-    description: Path to write the SARIF output file.
-    required: false
-    default: trivy-results.sarif
 
 runs:
   using: composite
@@ -29,14 +25,7 @@ runs:
       uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: ${{ inputs.image-ref }}
-        format: sarif
-        output: ${{ inputs.sarif-file }}
+        format: table
         exit-code: ${{ inputs.exit-code }}
         severity: ${{ inputs.severity }}
         ignore-unfixed: ${{ inputs.ignore-unfixed }}
-
-    - name: Upload SARIF to GitHub Security tab
-      if: ${{ !cancelled() && hashFiles(inputs.sarif-file) != '' }}
-      uses: github/codeql-action/upload-sarif@v4
-      with:
-        sarif_file: ${{ inputs.sarif-file }}
