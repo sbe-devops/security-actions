@@ -1,0 +1,21 @@
+name: Sign Container Image
+description: Keyless sign a container image with Cosign via Sigstore/Fulcio. Requires id-token:write permission in the calling job.
+
+inputs:
+  image-ref:
+    description: Fully qualified image reference including digest (e.g. 123456.dkr.ecr.us-east-1.amazonaws.com/my-image@sha256:abc123).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v3
+
+    - name: Sign image
+      shell: bash
+      env:
+        COSIGN_EXPERIMENTAL: "1"
+      run: |
+        cosign sign --yes "${{ inputs.image-ref }}"
+        echo "✓ Signed: ${{ inputs.image-ref }}"

@@ -1,0 +1,31 @@
+name: Attest SBOM
+description: Attach a SBOM to a container image as a Cosign attestation. Requires id-token:write permission in the calling job.
+
+inputs:
+  image-ref:
+    description: Fully qualified image reference including digest (e.g. 123456.dkr.ecr.us-east-1.amazonaws.com/my-image@sha256:abc123).
+    required: true
+  sbom-file:
+    description: Path to the SBOM file to attach.
+    required: true
+  sbom-type:
+    description: SBOM predicate type — cyclonedx or spdx.
+    required: false
+    default: cyclonedx
+
+runs:
+  using: composite
+  steps:
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v3
+
+    - name: Attest SBOM
+      shell: bash
+      env:
+        COSIGN_EXPERIMENTAL: "1"
+      run: |
+        cosign attest --yes \
+          --predicate "${{ inputs.sbom-file }}" \
+          --type "${{ inputs.sbom-type }}" \
+          "${{ inputs.image-ref }}"
+        echo "✓ SBOM attested: ${{ inputs.image-ref }}"

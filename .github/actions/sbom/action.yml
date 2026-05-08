@@ -1,0 +1,32 @@
+name: Generate SBOM
+description: Generate a Software Bill of Materials (SBOM) for a container image using Syft.
+
+inputs:
+  image-ref:
+    description: Image to generate SBOM for (e.g. test-image:26.5.0)
+    required: true
+  format:
+    description: SBOM output format — cyclonedx-json, spdx-json, or syft-json.
+    required: false
+    default: cyclonedx-json
+  output-file:
+    description: Path to write the SBOM file.
+    required: false
+    default: sbom.json
+
+outputs:
+  sbom-file:
+    description: Path to the generated SBOM file.
+    value: ${{ inputs.output-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Generate SBOM with Syft
+      uses: anchore/sbom-action@v0
+      with:
+        image: ${{ inputs.image-ref }}
+        format: ${{ inputs.format }}
+        output-file: ${{ inputs.output-file }}
+        upload-artifact: false
+        upload-release-assets: false
