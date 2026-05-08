@@ -17,15 +17,28 @@ inputs:
     description: Ignore vulnerabilities with no available fix.
     required: false
     default: "true"
+  trivy-version:
+    description: Trivy version to install.
+    required: false
+    default: "0.70.0"
 
 runs:
   using: composite
   steps:
-    - name: Scan with Trivy
-      uses: aquasecurity/trivy-action@v0.36.0
-      with:
-        image-ref: ${{ inputs.image-ref }}
-        format: table
-        exit-code: ${{ inputs.exit-code }}
-        severity: ${{ inputs.severity }}
-        ignore-unfixed: ${{ inputs.ignore-unfixed }}
+    - name: Install Trivy
+      shell: bash
+      run: |
+        curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${{ inputs.trivy-version }}/trivy_${{ inputs.trivy-version }}_Linux-ARM64.tar.gz" \
+          | tar -xz trivy
+        sudo mv trivy /usr/local/bin/trivy
+        trivy --version
+
+    - name: Scan image
+      shell: bash
+      run: |
+        trivy image \
+          --exit-code ${{ inputs.exit-code }} \
+          --severity "${{ inputs.severity }}" \
+          --ignore-unfixed=${{ inputs.ignore-unfixed }} \
+          --format table \
+          "${{ inputs.image-ref }}"
