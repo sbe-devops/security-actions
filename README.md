@@ -48,7 +48,7 @@ Pin all references to a tag. Never use `@main`.
 
 ```yaml
 - name: Scan image for CVEs
-  uses: sbe-devops/security-actions/.github/actions/scan@v26.5.0
+  uses: sbe-devops/security-actions/.github/actions/scan@v0.3.0
   with:
     image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
     severity: HIGH,CRITICAL        # default
@@ -64,7 +64,7 @@ Requires `security-events: write` to upload SARIF.
 ```yaml
 - name: Generate SBOM
   id: sbom
-  uses: sbe-devops/security-actions/.github/actions/sbom@v26.5.0
+  uses: sbe-devops/security-actions/.github/actions/sbom@v0.3.0
   with:
     image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
     format: cyclonedx-json   # default — also: spdx-json, syft-json
@@ -77,7 +77,7 @@ Output `sbom-file` contains the path to the generated SBOM and can be passed to 
 
 ```yaml
 - name: Sign image
-  uses: sbe-devops/security-actions/.github/actions/sign@v26.5.0
+  uses: sbe-devops/security-actions/.github/actions/sign@v0.3.0
   with:
     image-ref: ${{ env.IMAGE_URI }}@${{ steps.push.outputs.digest }}
 ```
@@ -88,7 +88,7 @@ Output `sbom-file` contains the path to the generated SBOM and can be passed to 
 
 ```yaml
 - name: Attest SBOM
-  uses: sbe-devops/security-actions/.github/actions/attest@v26.5.0
+  uses: sbe-devops/security-actions/.github/actions/attest@v0.3.0
   with:
     image-ref: ${{ env.IMAGE_URI }}@${{ steps.push.outputs.digest }}
     sbom-file: ${{ steps.sbom.outputs.sbom-file }}
@@ -116,10 +116,15 @@ Set these in the calling job's `permissions` block:
 
 ## Versioning
 
-This repository follows CalVer: `vYY.M.N` (e.g. `v26.5.0`).
+This repository follows [semver](https://semver.org/): `vMAJOR.MINOR.PATCH`. Consumers pin to a release tag — never reference `@main` directly.
 
-- Always pin to a specific tag — never `@main` or `@latest`.
-- If a release fails validation, the tag is not reused; the next fix increments `N`.
+```yaml
+- uses: sbe-devops/security-actions/.github/actions/scan@v0.3.0
+```
+
+To upgrade: update the tag in the `uses:` line and review the release notes for breaking changes.
+
+Releases at [sbe-devops/security-actions/releases](https://github.com/sbe-devops/security-actions/releases). Cutting procedure and **fail-forward** rule are documented in [SBE GitHub Actions standards](https://github.com/sbe-devops/standards/blob/main/github-actions.md#versioning).
 
 ---
 
