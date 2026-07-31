@@ -1,0 +1,82 @@
+name: test
+
+# Self-test for the security actions, per standards/github-actions.md
+# "Library repos must self-test — including a failing case".
+#
+# The failing fixture is the point. A validator that silently stops validating — a renamed
+# flag, a tool that starts exiting 0, a bad default — looks EXACTLY like a healthy green
+# check. Only an assertion that the gate rejects bad input can tell the two apart. This
+# matters most here: `scan` gates every other lane.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # A known-clean image must PASS.
+  scan-pass:
+    name: scan (must pass)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Scan a minimal image
+        uses: ./.github/actions/scan
+        with:
+          # scratch-based, no OS packages -> nothing for Trivy to flag.
+          image-ref: gcr.io/distroless/static-debian12:nonroot
+          severity: HIGH,CRITICAL
+
+  # A deliberately vulnerable image must FAIL. Inverted assertion: the job passes only if
+  # the action actually rejected it.
+  scan-reject:
+    name: scan (must reject)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Scan a known-vulnerable image
+        id: scan
+        continue-on-error: true
+        uses: ./.github/actions/scan
+        with:
+          # Trivy's own documented demo image for vulnerability output. Pinned by digest so
+          # the fixture cannot drift out from under the test.
+          image-ref: ghcr.io/aquasecurity/trivy-test-images:alpine-310
+          severity: HIGH,CRITICAL
+          # Force the gate to consider unfixed findings too, so this fixture stays reliably
+          # vulnerable even as upstream ships fixes.
+          ignore-unfixed: "false"
+      - name: Assert the vulnerable image was rejected
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.scan.outcome }}" = "failure" ]; then
+            echo "✓ scan correctly rejected a known-vulnerable image"
+          else
+            echo "::error::scan PASSED a known-vulnerable image — the security gate is not working"
+            exit 1
+          fi
+
+  # report-only must NOT fail, even on the vulnerable image.
+  scan-report-only:
+    name: scan (report-only does not gate)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Scan with exit-code 0
+        uses: ./.github/actions/scan
+        with:
+          image-ref: ghcr.io/aquasecurity/trivy-test-images:alpine-310
+          severity: HIGH,CRITICAL
+          ignore-unfixed: "false"
+          exit-code: "0"

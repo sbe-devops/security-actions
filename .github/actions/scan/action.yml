@@ -1,6 +1,16 @@
 name: Trivy CVE Scan
 description: Scan a container image for vulnerabilities with Trivy. Fails on findings at or above the severity threshold.
 
+# Wraps the vendor's own composite action (aquasecurity/trivy-action) rather than installing
+# Trivy ourselves, per standards/github-actions.md "Installing tools in workflows":
+#   - a curl'd binary is implicit trust — no dependency-graph entry, invisible to Renovate,
+#     no immutable reference, and nothing verifies the artifact
+#   - the vendor action resolves the runner architecture (our previous install hardcoded
+#     Linux-ARM64, which would have broken on the standard's amd64 exception path)
+#   - it caches the vulnerability DB (we re-downloaded it on every run; the DB comes from
+#     GHCR, which rate-limits)
+# This action stays thin: SBE's opinionated defaults over the vendor's behaviour.
+
 inputs:
   image-ref:
     description: Image to scan (e.g. test-image:26.5.0)
@@ -14,31 +24,31 @@ inputs:
     required: false
     default: "1"
   ignore-unfixed:
-    description: Ignore vulnerabilities with no available fix.
+    description: >-
+      Ignore vulnerabilities with no available fix. Default true — for images we do not build,
+      an unfixable CVE blocks without offering a remedy (see ADR-0028).
     required: false
     default: "true"
   trivy-version:
     description: Trivy version to install.
     required: false
     default: "0.70.0"
+  cache:
+    description: Cache the Trivy vulnerability DB between runs.
+    required: false
+    default: "true"
 
 runs:
   using: composite
   steps:
-    - name: Install Trivy
-      shell: bash
-      run: |
-        curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${{ inputs.trivy-version }}/trivy_${{ inputs.trivy-version }}_Linux-ARM64.tar.gz" \
-          | tar -xz trivy
-        sudo mv trivy /usr/local/bin/trivy
-        trivy --version
-
     - name: Scan image
-      shell: bash
-      run: |
-        trivy image \
-          --exit-code ${{ inputs.exit-code }} \
-          --severity "${{ inputs.severity }}" \
-          --ignore-unfixed=${{ inputs.ignore-unfixed }} \
-          --format table \
-          "${{ inputs.image-ref }}"
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        scan-type: image
+        image-ref: ${{ inputs.image-ref }}
+        severity: ${{ inputs.severity }}
+        exit-code: ${{ inputs.exit-code }}
+        ignore-unfixed: ${{ inputs.ignore-unfixed }}
+        format: table
+        version: v${{ inputs.trivy-version }}
+        cache: ${{ inputs.cache }}
