@@ -9,8 +9,6 @@ name: test
 # matters most here: `scan` gates every other lane.
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
