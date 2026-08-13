@@ -1,5 +1,5 @@
-name-template: "v$NEXT_PATCH_VERSION"
-tag-template: "v$NEXT_PATCH_VERSION"
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
 
 categories:
   - title: "Breaking Changes"
@@ -14,14 +14,38 @@ categories:
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 change-title-escapes: '\<*_&'
 
+# ⚠️ PRE-1.0 — a breaking change bumps the MINOR, not the major. `major:` is deliberately
+# absent: one labelled PR could otherwise draft v1.0.0, declaring the repo stable as a side
+# effect of labelling. AT v1.0.0: move "breaking" into a new major: block.
 version-resolver:
-  major:
-    labels: ["breaking"]
   minor:
-    labels: ["feature", "enhancement"]
+    labels: ["breaking", "feature", "enhancement"]
   patch:
     labels: ["bug", "fix", "maintenance", "chore", "dependencies"]
   default: patch
+
+# VERIFY AFTER MERGE: open the next PR with a conventional-commit title and confirm the
+# label lands. `title` MUST be a LIST — a scalar parses fine and silently matches nothing,
+# which is exactly how this shipped broken in container-workflows v0.10.3 (2026-08-12).
+autolabeler:
+  - label: "breaking"
+    title:
+      - '/^[a-z]+(\(.+\))?!:/'
+  - label: "feature"
+    title:
+      - '/^feat(\(.+\))?:/'
+  - label: "fix"
+    title:
+      - '/^fix(\(.+\))?:/'
+  - label: "ci"
+    title:
+      - '/^(ci|build)(\(.+\))?:/'
+  - label: "maintenance"
+    title:
+      - '/^(chore|refactor|docs|test|style|perf)(\(.+\))?:/'
+  - label: "dependencies"
+    title:
+      - '/^deps(\(.+\))?:/'
 
 template: |
   ## What's Changed
