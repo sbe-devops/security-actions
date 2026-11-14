@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`sign` and `attest` pasted their inputs into `run:`** (`${{ inputs.image-ref }}`, `sbom-file`, `sbom-type`).
+  - **The effect:** a caller's value became script source, in the caller's push job, beside its OIDC token and registry credentials. Found by GITOPS's sweep after PROOF's container-workflows finding (corp `1a99223`).
+  - **Now:**
+    - every input reaches its script through `env:`, quoted;
+    - a first **Check inputs** step, before cosign is installed, refuses an `image-ref` that isn't `<registry>/<repository>@sha256:<64 hex>`, an `sbom-type` outside `cyclonedx|spdx|spdxjson`, and an `sbom-file` that's empty, option-like, missing or a symlink.
+  - **⚠️ Behaviour change:** `image-ref` must be a **digest** reference. A tag is refused. docker-release already passes `<repo>@<digest>`.
+  - **Tests:**
+    - `tests/no-expr-in-run.py` (workflows and composite actions; 7 at v0.4.0, 0 now);
+    - `tests/input-injection.sh` (payloads refused and none run, controls pass, and v0.4.0's step runs one).
+
 ---
 
 ## [v0.3.0] - 2026-05-07

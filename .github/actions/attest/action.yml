@@ -3,19 +3,45 @@ description: Attach a SBOM to a container image as a Cosign attestation. Require
 
 inputs:
   image-ref:
-    description: Fully qualified image reference including digest (e.g. 123456.dkr.ecr.us-east-1.amazonaws.com/my-image@sha256:abc123).
+    description: Fully qualified image reference including digest (e.g. 123456.dkr.ecr.us-east-1.amazonaws.com/my-image@sha256:abc123). Refused unless it is <registry>/<repository>@sha256:<64 hex>.
     required: true
   sbom-file:
-    description: Path to the SBOM file to attach.
+    description: Path to the SBOM file to attach. Must be an existing regular file.
     required: true
   sbom-type:
-    description: SBOM predicate type — cyclonedx or spdx.
+    description: SBOM predicate type — cyclonedx, spdx or spdxjson.
     required: false
     default: cyclonedx
 
 runs:
   using: composite
   steps:
+    # 🔴 INPUTS ARE DATA (see sign/action.yml). Checked before cosign is even installed.
+    - name: Check inputs
+      shell: bash
+      env:
+        IMAGE_REF: ${{ inputs.image-ref }}
+        SBOM_FILE: ${{ inputs.sbom-file }}
+        SBOM_TYPE: ${{ inputs.sbom-type }}
+      run: |
+        set -euo pipefail
+        # A registry path, then @sha256:<64 hex>. Nothing else can reach cosign.
+        if ! [[ "$IMAGE_REF" =~ ^[A-Za-z0-9][A-Za-z0-9._/:-]{0,255}@sha256:[0-9a-f]{64}$ ]]; then
+          echo "::error::image-ref must be <registry>/<repository>@sha256:<64 hex>, a digest reference"
+          exit 1
+        fi
+        case "$SBOM_TYPE" in
+          cyclonedx|spdx|spdxjson) ;;
+          *) echo "::error::sbom-type must be cyclonedx, spdx or spdxjson"; exit 1 ;;
+        esac
+        case "$SBOM_FILE" in
+          -*|"") echo "::error::sbom-file must be a path, not empty or an option"; exit 1 ;;
+        esac
+        if [ ! -f "$SBOM_FILE" ] || [ -L "$SBOM_FILE" ]; then
+          echo "::error::sbom-file must be an existing regular file (not a symlink)"
+          exit 1
+        fi
+
     - name: Install Cosign
       uses: sigstore/cosign-installer@v3
 
@@ -23,9 +49,13 @@ runs:
       shell: bash
       env:
         COSIGN_EXPERIMENTAL: "1"
+        IMAGE_REF: ${{ inputs.image-ref }}
+        SBOM_FILE: ${{ inputs.sbom-file }}
+        SBOM_TYPE: ${{ inputs.sbom-type }}
       run: |
+        set -euo pipefail
         cosign attest --yes \
-          --predicate "${{ inputs.sbom-file }}" \
-          --type "${{ inputs.sbom-type }}" \
-          "${{ inputs.image-ref }}"
-        echo "✓ SBOM attested: ${{ inputs.image-ref }}"
+          --predicate "$SBOM_FILE" \
+          --type "$SBOM_TYPE" \
+          "$IMAGE_REF"
+        echo "✓ SBOM attested: $IMAGE_REF"

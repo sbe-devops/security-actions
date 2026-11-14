@@ -3,12 +3,27 @@ description: Keyless sign a container image with Cosign via Sigstore/Fulcio. Req
 
 inputs:
   image-ref:
-    description: Fully qualified image reference including digest (e.g. 123456.dkr.ecr.us-east-1.amazonaws.com/my-image@sha256:abc123).
+    description: Fully qualified image reference including digest (e.g. 123456.dkr.ecr.us-east-1.amazonaws.com/my-image@sha256:abc123). Refused unless it is <registry>/<repository>@sha256:<64 hex>.
     required: true
 
 runs:
   using: composite
   steps:
+    # 🔴 INPUTS ARE DATA. They reach the scripts through env: and are quoted, never pasted
+    # into run: with an expression (tests/no-expr-in-run.py). This action runs in the
+    # caller's push job, beside its OIDC token and registry credentials.
+    - name: Check inputs
+      shell: bash
+      env:
+        IMAGE_REF: ${{ inputs.image-ref }}
+      run: |
+        set -euo pipefail
+        # A registry path, then @sha256:<64 hex>. Nothing else can reach cosign.
+        if ! [[ "$IMAGE_REF" =~ ^[A-Za-z0-9][A-Za-z0-9._/:-]{0,255}@sha256:[0-9a-f]{64}$ ]]; then
+          echo "::error::image-ref must be <registry>/<repository>@sha256:<64 hex>, a digest reference"
+          exit 1
+        fi
+
     - name: Install Cosign
       uses: sigstore/cosign-installer@v3
 
@@ -16,6 +31,8 @@ runs:
       shell: bash
       env:
         COSIGN_EXPERIMENTAL: "1"
+        IMAGE_REF: ${{ inputs.image-ref }}
       run: |
-        cosign sign --yes "${{ inputs.image-ref }}"
-        echo "✓ Signed: ${{ inputs.image-ref }}"
+        set -euo pipefail
+        cosign sign --yes "$IMAGE_REF"
+        echo "✓ Signed: $IMAGE_REF"
