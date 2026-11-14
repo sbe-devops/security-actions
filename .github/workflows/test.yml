@@ -55,9 +55,11 @@ jobs:
           # vulnerable even as upstream ships fixes.
           ignore-unfixed: "false"
       - name: Assert the vulnerable image was rejected
+        env:
+          OUTCOME: ${{ steps.scan.outcome }}
         run: |
           set -euo pipefail
-          if [ "${{ steps.scan.outcome }}" = "failure" ]; then
+          if [ "$OUTCOME" = "failure" ]; then
             echo "✓ scan correctly rejected a known-vulnerable image"
           else
             echo "::error::scan PASSED a known-vulnerable image — the security gate is not working"
@@ -78,3 +80,28 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: "false"
           exit-code: "0"
+
+  # 🔴 Inputs are data (sweep, 2026-11-14): no ${{ }} inside any run: block, in the workflows
+  # or the composite actions. At v0.4.0 this finds 7 (sign 2, attest 4, test.yml 1).
+  no-expr-in-run:
+    name: no expression inside run (workflows and actions)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - run: python3 tests/no-expr-in-run.py
+
+  # sign's and attest's "Check inputs" against payloads, on their own bytes, with v0.4.0's
+  # Sign image as the control that runs one.
+  input-injection:
+    name: inputs are data (payloads)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: bash tests/input-injection.sh
