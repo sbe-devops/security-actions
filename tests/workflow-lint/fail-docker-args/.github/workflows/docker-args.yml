@@ -1,0 +1,15 @@
+on:
+  workflow_call:
+    inputs:
+      a:
+        type: string
+        required: true
+permissions: {}
+jobs:
+  j:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: x
+        uses: docker://alpine:3.20
+        with:
+          args: sh -c "echo ${{ inputs.a }}"

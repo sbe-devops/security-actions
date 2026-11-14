@@ -1,0 +1,12 @@
+name: comp
+description: composite fixture
+inputs:
+  a:
+    description: x
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: x
+      shell: bash
+      run: echo "${{ inputs.a }}"

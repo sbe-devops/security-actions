@@ -10,7 +10,7 @@ runs:
   using: composite
   steps:
     # 🔴 INPUTS ARE DATA. They reach the scripts through env: and are quoted, never pasted
-    # into run: with an expression (tests/no-expr-in-run.py). This action runs in the
+    # into run: with an expression (the workflow-lint gate). This action runs in the
     # caller's push job, beside its OIDC token and registry credentials.
     - name: Check inputs
       shell: bash

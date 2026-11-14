@@ -37,6 +37,7 @@ Scan and SBOM run against the local image before it is pushed. Sign and Attest r
 | `sbom` | `.github/actions/sbom` | Syft SBOM generation (CycloneDX, SPDX, or Syft JSON) | Pre-push |
 | `sign` | `.github/actions/sign` | Cosign keyless image signing via Sigstore/Fulcio | Post-push |
 | `attest` | `.github/actions/attest` | Cosign SBOM attestation attached to image digest | Post-push |
+| `workflow-lint` | `.github/actions/workflow-lint` | Gate: no `${{ }}` pasted into anything that runs (zizmor + actionlint + sinks they miss) | Every PR (required check) |
 
 ---
 
@@ -98,6 +99,47 @@ Output `sbom-file` contains the path to the generated SBOM and can be passed to 
 `image-ref` must include the digest. Requires `id-token: write`.
 
 ---
+
+### workflow-lint
+
+**The gate: no `${{ }}` expression is pasted into anything that runs** (`run:`, `script:`,
+`shell:`, `container`/`services` `options`, `docker://` args), whoever controls the value. Only
+`env:` passes; read the value as `"$VAR"` / `process.env.X`. This is an allowlist shape that
+fails closed, the ORCA ruling of 2026-11-14.
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@<sha> # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: sbe-devops/security-actions/.github/actions/workflow-lint@vX.Y.Z
+```
+
+**Three engines, one verdict:**
+- **zizmor 1.32.0, `template-injection`** (`--persona=pedantic --min-severity=informational
+  --no-config`): every severity fails, runner-set contexts included. It's installed from PyPI
+  with every wheel pinned by sha256 (`zizmor.lock`, the vendor's lock re-checked against PyPI).
+- **actionlint 1.7.12, `[expression]` findings** (`go install`, checked against Go's checksum
+  database), run with an empty config of ours. This catches a context where GitHub allows none,
+  such as `${{ }}` in a custom `shell:`.
+- **`lint.py`** covers the two sinks neither tool checks (`container`/`services` `options` and
+  `docker://` `args`/`entrypoint`), and refuses any file that doesn't parse as YAML. zizmor skips
+  such a file with only a warning.
+
+**Exceptions:** only a per-line `# zizmor: ignore[template-injection] -- reason: <why>`. Each
+one is printed as a reviewed exception, and PROOF reviews it in the PR that adds it. **A bare
+ignore fails. A repo `zizmor.yml` naming `template-injection`, or an `actionlint.yaml` with
+`ignore`, fails**, and neither config is read anyway.
+
+**Tests:** `tests/workflow-lint.sh` runs 26 fixtures, each as its own git root (the tools find
+configs at the git root). `tests/mutate-workflow-lint.sh` runs 14 mutants, one per part of the
+gate.
 
 ## Permissions
 

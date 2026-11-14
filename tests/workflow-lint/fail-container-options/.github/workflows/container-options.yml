@@ -1,0 +1,15 @@
+on:
+  workflow_call:
+    inputs:
+      a:
+        type: string
+        required: true
+permissions: {}
+jobs:
+  j:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: alpine:3.20
+      options: --env X=${{ inputs.a }}
+    steps:
+      - run: echo hi
