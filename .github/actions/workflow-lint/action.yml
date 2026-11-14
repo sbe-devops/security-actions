@@ -1,6 +1,6 @@
 name: Workflow lint
 description: >-
-  Fails if any ${{ }} expression is pasted into anything that runs (run:, script:, shell:,
+  Fails if any GitHub expression is pasted into anything that runs (run:, script:, shell:,
   container options, docker:// args), whoever controls it. zizmor template-injection at every
   severity (pedantic persona), actionlint's [expression] findings, and a check for the two sinks
   neither covers. Allowlist shape: only env: passes.
