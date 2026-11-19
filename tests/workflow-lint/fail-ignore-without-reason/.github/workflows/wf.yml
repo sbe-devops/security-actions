@@ -1,0 +1,12 @@
+on:
+  workflow_call:
+    inputs:
+      a:
+        type: string
+        required: true
+permissions: {}
+jobs:
+  j:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - run: echo "${{ inputs.a }}" # zizmor: ignore[template-injection]

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`workflow-lint`: the gate that no `${{ }}` expression is pasted into anything that runs,**
+  whoever controls it (ORCA ruling 2026-11-14, after GITOPS's zizmor/actionlint evaluation,
+  corp `dc42e3a`).
+  - **How:** zizmor 1.32.0 `template-injection` at every severity (pedantic persona, hash-pinned
+    install, `--no-config`), actionlint 1.7.12 `[expression]` (its own empty config), and a check
+    for `container`/`services` `options`, `docker://` args and unparseable files.
+  - **Exceptions:** per-line `-- reason:` ignores only. Blanket configs are refused.
+  - **Tests:** 26 fixtures and 14 mutants. This repo's own CI now runs it, which retires
+    `tests/no-expr-in-run.py`.
+
 ### Security
 
 - **`sign` and `attest` pasted their inputs into `run:`** (`${{ inputs.image-ref }}`, `sbom-file`, `sbom-type`).

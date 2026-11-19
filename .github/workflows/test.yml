@@ -81,17 +81,30 @@ jobs:
           ignore-unfixed: "false"
           exit-code: "0"
 
-  # 🔴 Inputs are data (sweep, 2026-11-14): no ${{ }} inside any run: block, in the workflows
-  # or the composite actions. At v0.4.0 this finds 7 (sign 2, attest 4, test.yml 1).
-  no-expr-in-run:
-    name: no expression inside run (workflows and actions)
+  # 🔴 THE GATE, dogfooded: no ${{ }} pasted into anything that runs (ORCA ruling 2026-11-14).
+  # This repo is linted by its own action; then the action's logic is proven on 26 fixtures
+  # (each a git repo root) and 14 mutants. Replaces the earlier tests/no-expr-in-run.py.
+  workflow-lint:
+    name: workflow-lint (self, fixtures, mutants)
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - run: python3 tests/no-expr-in-run.py
+      - name: Lint this repository with its own gate
+        id: lint
+        uses: ./.github/actions/workflow-lint
+      - name: The gate against its fixtures
+        env:
+          ZIZMOR: ${{ steps.lint.outputs.zizmor }}
+          ACTIONLINT: ${{ steps.lint.outputs.actionlint }}
+        run: bash tests/workflow-lint.sh "$ZIZMOR" "$ACTIONLINT"
+      - name: Each part of the gate is load-bearing (mutants)
+        env:
+          ZIZMOR: ${{ steps.lint.outputs.zizmor }}
+          ACTIONLINT: ${{ steps.lint.outputs.actionlint }}
+        run: bash tests/mutate-workflow-lint.sh "$ZIZMOR" "$ACTIONLINT"
 
   # sign's and attest's "Check inputs" against payloads, on their own bytes, with v0.4.0's
   # Sign image as the control that runs one.

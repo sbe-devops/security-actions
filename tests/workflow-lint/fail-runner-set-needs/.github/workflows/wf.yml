@@ -1,0 +1,17 @@
+on:
+  workflow_call:
+    inputs:
+      a:
+        type: string
+        required: true
+permissions: {}
+jobs:
+  first:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - run: "true"
+  j:
+    needs: [first]
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - run: echo "${{ needs.first.result }}"

@@ -1,0 +1,68 @@
+name: Workflow lint
+description: >-
+  Fails if any GitHub expression is pasted into anything that runs (run:, script:, shell:,
+  container options, docker:// args), whoever controls it. zizmor template-injection at every
+  severity (pedantic persona), actionlint's [expression] findings, and a check for the two sinks
+  neither covers. Allowlist shape: only env: passes.
+
+inputs:
+  path:
+    description: Repository root to lint (its .github/workflows/*.yml|yaml and every action.yml|yaml under it).
+    required: false
+    default: "."
+
+outputs:
+  zizmor:
+    description: Path of the zizmor binary this action installed (for a caller's own fixture tests).
+    value: ${{ steps.zizmor.outputs.bin }}
+  actionlint:
+    description: Path of the actionlint binary this action installed.
+    value: ${{ steps.actionlint.outputs.bin }}
+
+runs:
+  using: composite
+  steps:
+    # zizmor 1.32.0 from PyPI, every wheel pinned by hash (the vendor's own lock, re-checked
+    # against PyPI). No network fetch at lint time: the audit runs --offline.
+    - name: Install zizmor (hash-pinned)
+      id: zizmor
+      shell: bash
+      env:
+        LOCK: ${{ github.action_path }}/zizmor.lock
+      run: |
+        set -euo pipefail
+        venv="$RUNNER_TEMP/workflow-lint-zizmor"
+        python3 -m venv "$venv"
+        "$venv/bin/pip" install --quiet --disable-pip-version-check --no-deps --require-hashes -r "$LOCK"
+        "$venv/bin/zizmor" --version
+        echo "bin=$venv/bin/zizmor" >> "$GITHUB_OUTPUT"
+
+    # actionlint through the Go toolchain: `go install …@v1.7.12` is checked against the Go
+    # checksum database, so the binary is the tagged source or nothing.
+    - name: Set up Go (for actionlint)
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: "1.26.11"
+        cache: false
+
+    - name: Install actionlint 1.7.12
+      id: actionlint
+      shell: bash
+      run: |
+        set -euo pipefail
+        bin="$RUNNER_TEMP/workflow-lint-bin"
+        GOBIN="$bin" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+        "$bin/actionlint" --version | head -1
+        echo "bin=$bin/actionlint" >> "$GITHUB_OUTPUT"
+
+    - name: Lint
+      shell: bash
+      env:
+        LINT: ${{ github.action_path }}/lint.py
+        ROOT: ${{ inputs.path }}
+        ZIZMOR: ${{ steps.zizmor.outputs.bin }}
+        ACTIONLINT: ${{ steps.actionlint.outputs.bin }}
+      run: |
+        set -euo pipefail
+        python3 -c 'import yaml' 2>/dev/null || { echo "::error::workflow-lint needs PyYAML in the runner's python3"; exit 1; }
+        python3 "$LINT" --root "$ROOT" --zizmor "$ZIZMOR" --actionlint "$ACTIONLINT"

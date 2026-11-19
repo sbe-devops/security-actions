@@ -1,0 +1,14 @@
+on:
+  workflow_call:
+    inputs:
+      a:
+        type: string
+        required: true
+permissions: {}
+jobs:
+  j:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - id: s
+        run: echo "x=1" >> "$GITHUB_OUTPUT"
+      - run: echo "${{ steps.s.outputs.x }}"
