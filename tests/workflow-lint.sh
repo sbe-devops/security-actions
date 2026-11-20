@@ -9,6 +9,8 @@ Z="${1:?usage: workflow-lint.sh ZIZMOR ACTIONLINT}"; A="${2:?usage: workflow-lin
 reason() {
   case "$1" in
     fail-custom-shell)                      echo "actionlint [expression]" ;;
+    # a real literal type error (a string into a number input): the literal-type filter keeps it
+    fail-reusable-literal-number)           echo "is typed as number by reusable workflow" ;;
     # the custom-shell finding must still appear, which it only does if the repo's
     # actionlint.yaml (ignore everything) was NOT read
     fail-actionlint-config-ignore)          echo "actionlint [expression]" ;;
