@@ -29,6 +29,7 @@ mutant "zizmor failure = pass"         'return [f"zizmor did not produce a repor
 mutant "actionlint ignored"            'for e in errs if e.get("kind") == "expression" and' 'for e in errs if False and'
 mutant "literal-type filter off"       'and not LITERAL_INPUT_TYPE.match(e.get("message", ""))]' ']'
 mutant "literal-type filter takes all" 'and not LITERAL_INPUT_TYPE.match(e.get("message", ""))]' 'and False]'
+mutant "literal-type filter any input"  'is typed as string by reusable workflow' 'is typed as \w+ by reusable workflow'
 mutant "container options unchecked"   'if isinstance(c, dict) and EXPR.search(str(c.get("options", ""))):' 'if False:'
 mutant "docker args unchecked"         'if EXPR.search(str(w.get(k, ""))):' 'if False:'
 mutant "composite actions skipped"     'files = wf + actions'               'files = wf'

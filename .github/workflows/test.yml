@@ -129,6 +129,27 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 5
     steps:
+      # A job missing from `needs` is ungated (PROOF, post-merge #7): this reads the file's own
+      # job list and fails unless `needs` is exactly every job but gate.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/workflows/test.yml
+          sparse-checkout-cone-mode: false
+      - name: every job is in needs
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          want="$(yq '.jobs | keys | .[] | select(. != "gate")' .github/workflows/test.yml | sort)"
+          got="$(jq -r 'keys[]' <<<"$NEEDS" | sort)"
+          [ -n "$want" ] || { echo "::error::read no jobs from test.yml"; exit 1; }
+          if [ "$want" != "$got" ]; then
+            echo "::error::gate's needs must list every other job in test.yml"
+            diff <(echo "$want") <(echo "$got") || true
+            exit 1
+          fi
+          echo "✓ needs = every job in test.yml but gate ($(tr '\n' ' ' <<<"$got"))"
       - name: every job succeeded
         env:
           NEEDS: ${{ toJSON(needs) }}

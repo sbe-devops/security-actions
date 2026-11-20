@@ -1,0 +1,17 @@
+# A reusable workflow with a NUMBER input.
+on:
+  workflow_call:
+    inputs:
+      count:
+        type: number
+        required: false
+        default: 1
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - run: echo render

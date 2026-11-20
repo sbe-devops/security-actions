@@ -137,9 +137,28 @@ one is printed as a reviewed exception, and PROOF reviews it in the PR that adds
 ignore fails. A repo `zizmor.yml` naming `template-injection`, or an `actionlint.yaml` with
 `ignore`, fails**, and neither config is read anyway.
 
-**Tests:** `tests/workflow-lint.sh` runs 26 fixtures, each as its own git root (the tools find
-configs at the git root). `tests/mutate-workflow-lint.sh` runs 14 mutants, one per part of the
+**One actionlint message is dropped:** a literal into a reusable workflow's **string** input
+(`dry_run: "true"`), which actionlint 1.7.12 types as bool ignoring the quotes. That's a type
+check on a literal, not an expression in a sink. Into any other input type (`count: "abc"` into a
+`number`), it still fails.
+
+**Tests:** `tests/workflow-lint.sh` runs 28 fixtures, each as its own git root (the tools find
+configs at the git root). `tests/mutate-workflow-lint.sh` runs 17 mutants, one per part of the
 gate.
+
+**Making it required:** put the job in the repo's aggregate `gate` job (one that needs every
+other job and checks it does), and require `gate` alone. Pin the check to GitHub Actions
+(`integration_id` 15368), so no other app can post a passing `gate`:
+```
+gh api --method POST repos/sbe-devops/<repo>/rulesets --input - <<'JSON'
+{"name":"main-pr-required","target":"branch","enforcement":"active",
+ "conditions":{"ref_name":{"include":["~DEFAULT_BRANCH"],"exclude":[]}},
+ "bypass_actors":[],
+ "rules":[{"type":"required_status_checks","parameters":{"strict_required_status_checks_policy":true,"do_not_enforce_on_create":false,
+   "required_status_checks":[{"context":"gate","integration_id":15368}]}}]}
+JSON
+```
+If the repo already has a ruleset, update that one instead (`--method PUT …/rulesets/<id>`).
 
 ## Permissions
 

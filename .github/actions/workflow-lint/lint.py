@@ -110,7 +110,9 @@ def zizmor(binary: str, files: list[Path], root: Path) -> list[str]:
 # (measured, 1.7.12: "true", 'true', true and "false" all flagged; "yes" and "1" not). That is a type
 # check on a literal, never an expression in a sink, so it is the ONE [expression] message this gate
 # drops. Every other [expression] finding still fails: the drop is one exact shape, not a class.
-LITERAL_INPUT_TYPE = re.compile(r'^input "[^"]+" is typed as \w+ by reusable workflow "[^"]+"\. \w+ value cannot be assigned$')
+# Only into a STRING input, where any literal is valid: `count: "abc"` into a `number` input is a
+# real type error and still fails (PROOF, post-merge #8).
+LITERAL_INPUT_TYPE = re.compile(r'^input "[^"]+" is typed as string by reusable workflow "[^"]+"\. \w+ value cannot be assigned$')
 
 
 def actionlint(binary: str, files: list[Path], root: Path) -> list[str]:
