@@ -105,6 +105,14 @@ def zizmor(binary: str, files: list[Path], root: Path) -> list[str]:
     return sorted(set(out))
 
 
+# actionlint types a reusable workflow's `with:` LITERALS by their YAML text and ignores quoting:
+# `dry_run: "true"` into a `type: string` input is reported as "bool value cannot be assigned"
+# (measured, 1.7.12: "true", 'true', true and "false" all flagged; "yes" and "1" not). That is a type
+# check on a literal, never an expression in a sink, so it is the ONE [expression] message this gate
+# drops. Every other [expression] finding still fails: the drop is one exact shape, not a class.
+LITERAL_INPUT_TYPE = re.compile(r'^input "[^"]+" is typed as \w+ by reusable workflow "[^"]+"\. \w+ value cannot be assigned$')
+
+
 def actionlint(binary: str, files: list[Path], root: Path) -> list[str]:
     if not files:
         return []
@@ -122,7 +130,7 @@ def actionlint(binary: str, files: list[Path], root: Path) -> list[str]:
     except ValueError:
         return [f"actionlint did not produce a report (exit {o.returncode}): {o.stderr.strip()[-300:]}"]
     return [f"{e['filepath']}:{e['line']}: actionlint [{e['kind']}]: {e['message']}"
-            for e in errs if e.get("kind") == "expression"]
+            for e in errs if e.get("kind") == "expression" and not LITERAL_INPUT_TYPE.match(e.get("message", ""))]
 
 
 def unparseable(files: list[Path], root: Path) -> list[str]:

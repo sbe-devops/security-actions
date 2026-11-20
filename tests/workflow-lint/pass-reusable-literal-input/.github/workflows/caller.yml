@@ -1,0 +1,17 @@
+# Literals into a string input: actionlint 1.7.12 types "true"/"false" as bool and reports
+# "bool value cannot be assigned". A type check on a literal, not an expression in a sink: must PASS.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quoted-true:
+    uses: ./.github/workflows/callee.yml
+    with:
+      dry_run: "true"
+  quoted-false:
+    uses: ./.github/workflows/callee.yml
+    with:
+      dry_run: "false"

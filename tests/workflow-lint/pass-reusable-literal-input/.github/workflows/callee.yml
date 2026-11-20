@@ -1,0 +1,17 @@
+# A reusable workflow with a string input (eks-workflows helm-kustomize.yml dry_run shape).
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        type: string
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - run: echo render
