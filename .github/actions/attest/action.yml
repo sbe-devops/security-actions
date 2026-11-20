@@ -6,7 +6,7 @@ inputs:
     description: Fully qualified image reference including digest (e.g. 123456.dkr.ecr.us-east-1.amazonaws.com/my-image@sha256:abc123). Refused unless it is <registry>/<repository>@sha256:<64 hex>.
     required: true
   sbom-file:
-    description: Path to the SBOM file to attach. Must be an existing regular file.
+    description: Path to the SBOM file to attach. Must be an existing regular file under RUNNER_TEMP or GITHUB_WORKSPACE.
     required: true
   sbom-type:
     description: SBOM predicate type — cyclonedx, spdx or spdxjson.
@@ -41,9 +41,24 @@ runs:
           echo "::error::sbom-file must be an existing regular file (not a symlink)"
           exit 1
         fi
+        # The file becomes a PUBLIC attestation (the registry and Sigstore's transparency
+        # log), so it must be one this job made: under RUNNER_TEMP or GITHUB_WORKSPACE, after
+        # every symlink and `..` is resolved. Not ~/.docker/config.json, which hosted runners
+        # ship with a login in it.
+        real="$(realpath -- "$SBOM_FILE")"
+        inside=false
+        for base in "${RUNNER_TEMP:-}" "${GITHUB_WORKSPACE:-}"; do
+          [ -n "$base" ] || continue
+          b="$(realpath -- "$base" 2>/dev/null)" || continue
+          case "$real" in "$b"/*) inside=true ;; esac
+        done
+        if [ "$inside" != true ]; then
+          echo "::error::sbom-file must be under RUNNER_TEMP or GITHUB_WORKSPACE (it resolves to $real)"
+          exit 1
+        fi
 
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v3
+      uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1, what @v3 resolved to on 2026-11-20
 
     - name: Attest SBOM
       shell: bash

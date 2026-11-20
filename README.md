@@ -60,6 +60,8 @@ Pin all references to a tag. Never use `@main`.
 
 Requires `security-events: write` to upload SARIF.
 
+`trivy-version` (default `0.70.0`) must be `X.Y.Z` with no leading `v`. Anything else is refused before Trivy is installed.
+
 ### sbom
 
 ```yaml
@@ -97,6 +99,8 @@ Output `sbom-file` contains the path to the generated SBOM and can be passed to 
 ```
 
 `image-ref` must include the digest. Requires `id-token: write`.
+
+`sbom-file` must be a regular file under `RUNNER_TEMP` or `GITHUB_WORKSPACE`, after symlinks and `..` are resolved. The SBOM becomes a public attestation, so a file the job didn't make (`~/.docker/config.json`, say) is refused.
 
 ---
 

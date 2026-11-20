@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **`attest` attached any readable file as a public attestation.** `sbom-file` must now resolve, after symlinks and `..`, to a path under `RUNNER_TEMP` or `GITHUB_WORKSPACE`. A file the job didn't make, such as the `~/.docker/config.json` that hosted runners ship with a login in it, no longer reaches Sigstore's transparency log.
+- **`scan` refuses a `trivy-version` that isn't `X.Y.Z`**, before trivy-action downloads anything.
+- **`sigstore/cosign-installer` and `anchore/sbom-action` are pinned by commit SHA**, at what `@v3` and `@v0` resolved to on 2026-11-20: v3.9.1 and v0.24.0. Neither version changes.
+- **Tests:** `tests/input-injection.sh` covers both new checks, each with a mutant that removes it and must then accept every bad case.
+
 - **`sign` and `attest` pasted their inputs into `run:`** (`${{ inputs.image-ref }}`, `sbom-file`, `sbom-type`).
   - **The effect:** a caller's value became script source, in the caller's push job, beside its OIDC token and registry credentials. Found by GITOPS's sweep after PROOF's container-workflows finding (corp `1a99223`).
   - **Now:**
