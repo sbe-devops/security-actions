@@ -106,8 +106,9 @@ jobs:
           ACTIONLINT: ${{ steps.lint.outputs.actionlint }}
         run: bash tests/mutate-workflow-lint.sh "$ZIZMOR" "$ACTIONLINT"
 
-  # sign's and attest's "Check inputs" against payloads, on their own bytes, with v0.4.0's
-  # Sign image as the control that runs one.
+  # sign's, attest's and scan's "Check inputs" against payloads, on their own bytes, with a
+  # mutant for each of attest's confinement and scan's version check, and v0.4.0's Sign image
+  # as the control that runs one.
   input-injection:
     name: inputs are data (payloads)
     runs-on: ubuntu-24.04-arm

@@ -30,7 +30,7 @@ inputs:
     required: false
     default: "true"
   trivy-version:
-    description: Trivy version to install.
+    description: Trivy version to install, as X.Y.Z with no leading v (e.g. 0.70.0). Anything else is refused.
     required: false
     default: "0.70.0"
   cache:
@@ -41,6 +41,19 @@ inputs:
 runs:
   using: composite
   steps:
+    # trivy-version picks the binary trivy-action downloads and runs. Only an exact release
+    # reaches it: not `latest`, a range, or a string the action would build a URL from.
+    - name: Check inputs
+      shell: bash
+      env:
+        TRIVY_VERSION: ${{ inputs.trivy-version }}
+      run: |
+        set -euo pipefail
+        if ! [[ "$TRIVY_VERSION" =~ ^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$ ]]; then
+          echo "::error::trivy-version must be X.Y.Z with no leading v (e.g. 0.70.0)"
+          exit 1
+        fi
+
     - name: Scan image
       uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
       with:

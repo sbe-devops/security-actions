@@ -23,7 +23,7 @@ runs:
   using: composite
   steps:
     - name: Generate SBOM with Syft
-      uses: anchore/sbom-action@v0
+      uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0, what @v0 resolved to on 2026-11-20
       with:
         image: ${{ inputs.image-ref }}
         format: ${{ inputs.format }}
