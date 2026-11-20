@@ -118,3 +118,24 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - run: bash tests/input-injection.sh
+
+  # The one check a ruleset requires: it survives jobs being added or renamed, and with
+  # `always()` it reports even when a job it needs fails. Every needed job must SUCCEED (none
+  # here is conditional, so a skip is a fault, not a pass).
+  gate:
+    name: gate
+    if: always()
+    needs: [scan-pass, scan-reject, scan-report-only, workflow-lint, input-injection]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    steps:
+      - name: every job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          results="$(jq -r 'to_entries | map("\(.key)=\(.value.result)") | join(" ")' <<<"$NEEDS")"
+          [ -n "$results" ] || { echo "::error::gate needs no job: nothing is gated"; exit 1; }
+          bad="$(jq -r 'to_entries | map(select(.value.result != "success")) | map(.key) | join(" ")' <<<"$NEEDS")"
+          [ -z "$bad" ] || { echo "::error::not success: $bad ($results)"; exit 1; }
+          echo "✓ gate open ($results)"
